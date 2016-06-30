@@ -1,12 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.OData.Extensions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using OpenIddict;
+using OpenIddictODataRepro.Data;
+using OpenIddictODataRepro.Data.Models;
 
 namespace OpenIddictODataRepro
 {
@@ -36,7 +37,20 @@ namespace OpenIddictODataRepro
             // Add framework services.
             services.AddApplicationInsightsTelemetry(Configuration);
 
+            services.AddOData<ISampleService>();
+
             services.AddMvc();
+            
+            services
+                .AddOpenIddict<ApplicationUser, ApplicationRole, OpenIddictApplication, OpenIddictAuthorization, OpenIddictScope, OpenIddictToken, ApplicationDbContext, string>()
+                .Configure(options =>
+                {
+                    options.AuthorizationEndpointPath = "/connect/authorize";
+                    options.AccessTokenLifetime = new TimeSpan(30, 0, 0, 0);
+                    options.AllowInsecureHttp = true;
+                })
+                .AddMvc()
+                .DisableHttpsRequirement();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -59,7 +73,11 @@ namespace OpenIddictODataRepro
 
             app.UseApplicationInsightsExceptionTelemetry();
 
+            app.UseOpenIddict();
+
             app.UseStaticFiles();
+
+            app.UseOData("odata");
 
             app.UseMvc(routes =>
             {
